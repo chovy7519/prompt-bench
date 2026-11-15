@@ -218,6 +218,7 @@ function renderPromptDetail(prompt) {
       <div class="detail-topline"><div class="detail-meta"><button class="icon-button detail-back" data-action="close-prompt-detail" aria-label="返回提示词列表"><i data-lucide="arrow-left"></i></button><span>SAMPLE / ${prompt.number}</span></div><div>
         <button class="icon-button ${prompt.favorite ? 'is-favorite' : ''}" data-action="toggle-favorite" data-id="${prompt.id}" aria-label="收藏"><i data-lucide="star"></i></button>
         <button class="icon-button" data-action="download-source" data-id="${prompt.id}" aria-label="导出原始提示词"><i data-lucide="download"></i></button>
+        <button class="icon-button is-danger" data-action="delete-prompt" data-id="${prompt.id}" aria-label="删除这条提示词"><i data-lucide="trash-2"></i></button>
       </div></div>
       <div class="detail-heading"><span class="type-mark"><i data-lucide="${typeIcon(prompt.type)}"></i>${prompt.type}</span><h2>${escapeHTML(prompt.title)}</h2><p>${escapeHTML(prompt.excerpt)}</p></div>
       <a class="source-link" href="${escapeHTML(prompt.url)}" target="_blank" rel="noreferrer"><i data-lucide="external-link"></i>采集自 ${escapeHTML(prompt.source)}<span>查看来源</span></a>
@@ -245,11 +246,11 @@ function renderLibrary() {
       <div class="library-grid">
         <section class="prompt-list" aria-label="提示词列表">
           <div class="list-caption"><span>${prompts.length} SAMPLES</span><span>多选以建立学习集</span></div>
-          ${prompts.length ? prompts.map(renderPromptCard).join('') : `<div class="empty-search"><i data-lucide="search"></i><h3>没有找到这束微光</h3><p>试试其他关键词或清除筛选。</p><button class="text-button" data-action="clear-filters">清除所有筛选</button></div>`}
+          ${prompts.length ? prompts.map(renderPromptCard).join('') : `<div class="empty-search"><i data-lucide="search"></i><h3>没有找到这束微光</h3><p>${state.prompts.length ? '试试其他关键词或清除筛选。' : '样本库已清空，可以恢复初始示例重新开始。'}</p>${state.prompts.length ? '<button class="text-button" data-action="clear-filters">清除所有筛选</button>' : '<button class="text-button" data-action="reset-data">恢复初始示例</button>'}</div>`}
         </section>
         ${renderPromptDetail(active)}
       </div>
-      ${state.bulkSelected.size ? `<div class="bulk-bar"><span class="bulk-count">${state.bulkSelected.size}</span><strong>条样本已选择</strong><button class="text-button" data-action="clear-bulk">取消</button><button class="button primary" data-action="bulk-learning">建立学习集<i data-lucide="arrow-up-right"></i></button></div>` : ''}
+      ${state.bulkSelected.size ? `<div class="bulk-bar"><span class="bulk-count">${state.bulkSelected.size}</span><strong>条样本已选择</strong><button class="text-button" data-action="clear-bulk">取消</button><button class="button danger" data-action="delete-bulk"><i data-lucide="trash-2"></i><span>删除所选</span></button><button class="button primary" data-action="bulk-learning">建立学习集<i data-lucide="arrow-up-right"></i></button></div>` : ''}
     </div>`;
 }
 
@@ -395,7 +396,7 @@ function renderGallery() {
         ${works.map((work, index) => `
           <article class="work-card ${work.type === '图片' ? 'artwork' : ''}" style="--delay:${index * 45}ms">
             <button class="work-visual" data-action="open-work" data-id="${work.id}"><img src="${work.image}" alt="${escapeHTML(work.title)}" loading="lazy"><span class="work-open"><i data-lucide="maximize"></i>查看作品</span><span class="work-type"><i data-lucide="${typeIcon(work.type)}"></i>${work.type}</span></button>
-            <div class="work-meta"><div><span>W/${String(index + 1).padStart(3, '0')}</span><h3>${escapeHTML(work.title)}</h3></div><time>${escapeHTML(work.date)}</time></div>
+            <div class="work-meta"><div><span>W/${String(index + 1).padStart(3, '0')}</span><h3>${escapeHTML(work.title)}</h3></div><div class="work-meta-side"><time>${escapeHTML(work.date)}</time><button class="icon-button is-danger work-delete" data-action="delete-work" data-id="${work.id}" aria-label="删除作品 ${escapeHTML(work.title)}"><i data-lucide="trash-2"></i></button></div></div>
             <button class="work-prompt-link" data-action="trace-work" data-id="${work.id}">查看提示词<i data-lucide="arrow-up-right"></i></button>
           </article>`).join('')}
         <button class="new-work-card" data-view="workbench"><span>△</span><h3>下一件作品，<br>从一条提示词开始。</h3><p>进入学习工作台<i data-lucide="arrow-up-right"></i></p></button>
@@ -493,6 +494,47 @@ function openSettings() {
     <div class="settings-content"><div><i data-lucide="archive"></i><span><strong>${state.prompts.length} 条提示词 · ${state.works.length} 件作品</strong><p>所有采集、学习和作品数据仅存储在当前浏览器的 localStorage 中。</p></span></div><div><i data-lucide="info"></i><span><strong>演示模式</strong><p>AI 整理与生成由本地示例模拟，不会向模型服务商发送任何内容。</p></span></div></div>
     <div class="modal-actions"><button class="button danger" data-action="reset-data"><i data-lucide="trash-2"></i>恢复初始示例</button><button class="button primary" data-action="close-modal">完成</button></div>
   `, 'settings-modal');
+}
+
+function openDeletePromptModal(id) {
+  const prompt = state.prompts.find((item) => item.id === id);
+  if (!prompt) return;
+  openModal(`
+    <div class="modal-heading"><div><span>CONFIRM / 确认删除</span><h2>删除这条提示词？</h2><p>「${escapeHTML(prompt.title)}」删除后无法恢复，学习集中的相关样本也会一并移除。</p></div><button class="icon-button" data-action="close-modal" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <div class="modal-actions"><button class="button secondary" data-action="close-modal">取消</button><button class="button danger" data-action="confirm-delete-prompt" data-id="${id}"><i data-lucide="trash-2"></i>确认删除</button></div>
+  `, 'confirm-modal');
+}
+
+function openDeleteBulkModal() {
+  const count = state.bulkSelected.size;
+  if (!count) return;
+  openModal(`
+    <div class="modal-heading"><div><span>CONFIRM / 确认删除</span><h2>删除所选的 ${count} 条提示词？</h2><p>删除后无法恢复，学习集中的相关样本也会一并移除。</p></div><button class="icon-button" data-action="close-modal" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <div class="modal-actions"><button class="button secondary" data-action="close-modal">取消</button><button class="button danger" data-action="confirm-delete-bulk"><i data-lucide="trash-2"></i>全部删除</button></div>
+  `, 'confirm-modal');
+}
+
+function openDeleteWorkModal(id) {
+  const work = state.works.find((item) => item.id === id);
+  if (!work) return;
+  openModal(`
+    <div class="modal-heading"><div><span>CONFIRM / 确认删除</span><h2>删除这件作品？</h2><p>「${escapeHTML(work.title)}」删除后无法恢复，其留存的生成提示词记录也会一并移除。</p></div><button class="icon-button" data-action="close-modal" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <div class="modal-actions"><button class="button secondary" data-action="close-modal">取消</button><button class="button danger" data-action="confirm-delete-work" data-id="${id}"><i data-lucide="trash-2"></i>确认删除</button></div>
+  `, 'confirm-modal');
+}
+
+function deletePrompts(ids) {
+  const idSet = new Set(ids);
+  state.prompts = state.prompts.filter((prompt) => !idSet.has(prompt.id));
+  state.learningIds = state.learningIds.filter((item) => !idSet.has(item));
+  idSet.forEach((id) => state.bulkSelected.delete(id));
+  if (idSet.has(state.selectedPromptId)) state.selectedPromptId = state.prompts[0]?.id || null;
+  persist();
+}
+
+function deleteWork(id) {
+  state.works = state.works.filter((work) => work.id !== id);
+  persist();
 }
 
 function generatePrompt() {
@@ -711,6 +753,16 @@ document.addEventListener('click', (event) => {
     }
     case 'reset-data':
       localStorage.removeItem('prism-prompts'); localStorage.removeItem('prism-works'); localStorage.removeItem('prism-learning'); location.reload(); break;
+    case 'delete-prompt': openDeletePromptModal(id); break;
+    case 'confirm-delete-prompt': { deletePrompts([id]); closeModal(); render(); toast('提示词已删除'); break; }
+    case 'delete-bulk': openDeleteBulkModal(); break;
+    case 'confirm-delete-bulk': {
+      const count = state.bulkSelected.size;
+      deletePrompts([...state.bulkSelected]);
+      closeModal(); render(); toast(`已删除 ${count} 条提示词`); break;
+    }
+    case 'delete-work': openDeleteWorkModal(id); break;
+    case 'confirm-delete-work': { deleteWork(id); closeModal(); render(); toast('作品已删除'); break; }
     default: break;
   }
 });
