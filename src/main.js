@@ -43,6 +43,8 @@ const state = {
   query: '',
   typeFilter: '全部',
   tagFilter: '',
+  sort: 'recent',
+  sortOpen: false,
   galleryFilter: '全部',
   bulkSelected: new Set(),
   expandedGroups: new Set(['role', 'structure']),
@@ -171,14 +173,23 @@ function renderTopbar() {
     </header>`;
 }
 
+const sortLabels = { recent: '最近采集', favorite: '收藏优先', title: '标题排序' };
+
 function filteredPrompts() {
   const query = state.query.trim().toLowerCase();
-  return state.prompts.filter((prompt) => {
+  const prompts = state.prompts.filter((prompt) => {
     const matchesType = state.typeFilter === '全部' || prompt.type === state.typeFilter;
     const matchesTag = !state.tagFilter || prompt.tags.includes(state.tagFilter);
     const haystack = `${prompt.title} ${prompt.excerpt} ${prompt.source} ${prompt.tags.join(' ')} ${prompt.content}`.toLowerCase();
     return matchesType && matchesTag && (!query || haystack.includes(query));
   });
+  if (state.sort === 'favorite') {
+    return [...prompts].sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.number.localeCompare(b.number));
+  }
+  if (state.sort === 'title') {
+    return [...prompts].sort((a, b) => a.title.localeCompare(b.title, 'zh-Hans-CN'));
+  }
+  return prompts;
 }
 
 function renderPromptCard(prompt) {
@@ -229,7 +240,7 @@ function renderLibrary() {
       <div class="filter-bar">
         <div class="segmented type-filter">${['全部', 'Web', 'Three.js', '图片'].map((type) => `<button class="${state.typeFilter === type ? 'active' : ''}" data-action="filter-type" data-type="${type}">${type}</button>`).join('')}</div>
         <div class="active-filter">${state.tagFilter ? `<button data-action="filter-tag" data-tag=""><i data-lucide="list-filter"></i># ${state.tagFilter}<i data-lucide="x"></i></button>` : '<span><i data-lucide="list-filter"></i>按媒介筛选样本</span>'}</div>
-        <button class="sort-button">最近采集<i data-lucide="chevron-down"></i></button>
+        <div class="sort-wrap"><button class="sort-button" data-action="toggle-sort" aria-expanded="${state.sortOpen}" aria-haspopup="menu">${sortLabels[state.sort]}<i data-lucide="chevron-down"></i></button>${state.sortOpen ? `<div class="sort-menu" role="menu">${Object.entries(sortLabels).map(([key, label]) => `<button role="menuitem" class="${state.sort === key ? 'active' : ''}" data-action="set-sort" data-sort="${key}">${label}${state.sort === key ? '<i data-lucide="check"></i>' : ''}</button>`).join('')}</div>` : ''}</div>
       </div>
       <div class="library-grid">
         <section class="prompt-list" aria-label="提示词列表">
@@ -528,6 +539,7 @@ function saveWork() {
     type: state.studioType,
     date: '刚刚',
     promptId: state.selectedPromptId,
+    promptContent: currentGenerated(),
     image,
   });
   persist();
@@ -565,6 +577,11 @@ function clearFilters() {
 }
 
 document.addEventListener('click', (event) => {
+  if (state.sortOpen && !event.target.closest('.sort-wrap')) {
+    state.sortOpen = false;
+    document.querySelector('.sort-menu')?.remove();
+    document.querySelector('.sort-button')?.setAttribute('aria-expanded', 'false');
+  }
   const viewButton = event.target.closest('[data-view]');
   if (viewButton) {
     state.view = viewButton.dataset.view;
@@ -609,6 +626,8 @@ document.addEventListener('click', (event) => {
     case 'remove-learning': state.learningIds = state.learningIds.filter((item) => item !== id); persist(); render(); break;
     case 'filter-type': state.typeFilter = type; state.mobileDetailOpen = false; render(); break;
     case 'filter-tag': state.tagFilter = tag; state.view = 'library'; state.mobileDetailOpen = false; render(); break;
+    case 'toggle-sort': state.sortOpen = !state.sortOpen; render(); break;
+    case 'set-sort': state.sort = button.dataset.sort; state.sortOpen = false; render(); break;
     case 'clear-filters': clearFilters(); break;
     case 'toggle-expand':
       if (state.expandedGroups.has(id)) state.expandedGroups.delete(id); else state.expandedGroups.add(id);
@@ -642,7 +661,11 @@ document.addEventListener('click', (event) => {
     case 'three-reset': threeDemo?.reset(); toast('已恢复初始视角'); break;
     case 'select-image': state.selectedImage = Number(button.dataset.index); render(); break;
     case 'download-image': {
-      const anchor = document.createElement('a'); anchor.href = studioImages[state.selectedImage]; anchor.target = '_blank'; anchor.rel = 'noreferrer'; anchor.click(); break;
+      const source = studioImages[state.selectedImage];
+      const anchor = document.createElement('a');
+      anchor.href = source;
+      anchor.download = `prism-${source.split('/').pop()}`;
+      anchor.click(); break;
     }
     case 'view-generated': openPromptModal(currentGenerated()); break;
     case 'copy-modal': copyText(modalRoot.querySelector('.modal-prompt')?.textContent || ''); break;
@@ -656,7 +679,7 @@ document.addEventListener('click', (event) => {
     case 'trace-work': {
       const work = state.works.find((item) => item.id === id);
       const prompt = state.prompts.find((item) => item.id === work?.promptId);
-      openPromptModal(prompt?.content || currentGenerated(), work?.title || '作品关联提示词'); break;
+      openPromptModal(work?.promptContent || prompt?.content || currentGenerated(), work?.title || '作品关联提示词'); break;
     }
     case 'collect-mode': state.collectMode = button.dataset.mode; openCollectModal(); break;
     case 'parse-link': {
@@ -742,6 +765,11 @@ document.addEventListener('drop', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.sortOpen) {
+    state.sortOpen = false;
+    render();
+    return;
+  }
   if (event.key === 'Escape' && modalRoot.firstChild) {
     event.preventDefault();
     closeModal();

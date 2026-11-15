@@ -133,6 +133,12 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .active-filter button { display: flex; align-items: center; gap: 7px; padding: 6px 9px; color: var(--lime); background: var(--bg); border: 0; border-radius: 9px; box-shadow: var(--shadow-xs); font-size: 10px; }
 .sort-button { display: flex; align-items: center; gap: 6px; padding: 6px 0; border: 0; color: var(--muted); background: none; font-size: 10px; }
 .sort-button svg { width: 12px; }
+.sort-wrap { position: relative; }
+.sort-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; display: grid; min-width: 128px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+.sort-menu button { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 9px; border: 0; border-radius: 8px; color: var(--muted); background: none; font-size: 12px; text-align: left; }
+.sort-menu button:hover { color: var(--text); background: #e4e9ef; }
+.sort-menu button.active { color: var(--lime); }
+.sort-menu button svg { width: 12px; margin-left: auto; }
 .library-grid { display: grid; grid-template-columns: minmax(320px, 370px) minmax(0, 1fr); gap: 22px; height: calc(100vh - 281px); min-height: 630px; padding-top: 20px; }
 .prompt-list { min-height: 0; padding: 5px 12px 5px 5px; overflow-y: auto; }
 .list-caption { display: flex; justify-content: space-between; margin-bottom: 12px; color: var(--muted); font: 9px var(--mono); letter-spacing: .08em; }
@@ -687,7 +693,9 @@ body { line-height: 1.5; }
   .type-filter button { flex: 1; padding: 0 6px; }
   .active-filter { margin-right: 0; }
   .active-filter > span { display: none; }
-  .sort-button { margin-left: auto; }
+  .sort-wrap { margin-left: auto; }
+  .sort-button { margin-left: 0; }
+  .sort-menu { right: auto; left: 0; }
   .library-grid { display: block; height: auto; min-height: 0; }
   .prompt-list { padding-right: 5px; overflow: visible; }
   .detail-panel { display: none; margin-top: 0; padding: 0 17px 80px; overflow: visible; }
