@@ -98,7 +98,7 @@ export const starterWorks = [
     type: 'Web',
     date: '今天',
     promptId: 'p-001',
-    image: '/images/mori-forest.jpg',
+    image: 'images/mori-forest.jpg',
   },
   {
     id: 'w-002',
@@ -106,7 +106,7 @@ export const starterWorks = [
     type: 'Three.js',
     date: '昨天',
     promptId: 'p-002',
-    image: '/images/breathing-prism.jpg',
+    image: 'images/breathing-prism.jpg',
   },
   {
     id: 'w-003',
@@ -114,7 +114,7 @@ export const starterWorks = [
     type: '图片',
     date: '11月11日',
     promptId: 'p-003',
-    image: '/images/camellia-still-life.jpg',
+    image: 'images/camellia-still-life.jpg',
   },
   {
     id: 'w-004',
@@ -122,7 +122,7 @@ export const starterWorks = [
     type: 'Web',
     date: '11月10日',
     promptId: 'p-004',
-    image: '/images/poetry-line.jpg',
+    image: 'images/poetry-line.jpg',
   },
   {
     id: 'w-005',
@@ -130,7 +130,7 @@ export const starterWorks = [
     type: '图片',
     date: '11月08日',
     promptId: 'p-005',
-    image: '/images/concrete-monument.jpg',
+    image: 'images/concrete-monument.jpg',
   },
   {
     id: 'w-006',
@@ -138,7 +138,7 @@ export const starterWorks = [
     type: 'Three.js',
     date: '11月06日',
     promptId: 'p-006',
-    image: '/images/dust-galaxy.jpg',
+    image: 'images/dust-galaxy.jpg',
   },
 ];
 

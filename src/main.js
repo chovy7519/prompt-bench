@@ -61,10 +61,10 @@ const state = {
 };
 
 const studioImages = [
-  '/images/breathing-prism.jpg',
-  '/images/camellia-still-life.jpg',
-  '/images/mori-forest.jpg',
-  '/images/dust-galaxy.jpg',
+  'images/breathing-prism.jpg',
+  'images/camellia-still-life.jpg',
+  'images/mori-forest.jpg',
+  'images/dust-galaxy.jpg',
 ];
 
 const app = document.querySelector('#app');
