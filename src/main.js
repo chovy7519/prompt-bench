@@ -41,6 +41,7 @@ const state = {
   selectedPromptId: 'p-001',
   mobileDetailOpen: false,
   workbenchPanel: 'samples',
+  compareId: '',
   query: '',
   typeFilter: '全部',
   tagFilter: '',
@@ -275,20 +276,27 @@ function renderLearningSamples() {
     return `<div class="empty-samples"><span class="empty-prism">△</span><h3>学习集还是空的</h3><p>从样本库挑选 2–4 条提示词，对照它们的写法，打磨你自己的表达。</p><button class="button secondary" data-view="library"><i data-lucide="plus"></i>选择样本</button></div>`;
   }
   return samples.map((prompt, index) => `
-    <article class="learning-sample" draggable="true" data-drag-id="${prompt.id}" data-drop-id="${prompt.id}">
+    <article class="learning-sample ${state.compareId === prompt.id ? 'active' : ''}" draggable="true" data-action="select-compare" data-id="${prompt.id}" data-drag-id="${prompt.id}" data-drop-id="${prompt.id}">
       <div class="sample-order">${String(index + 1).padStart(2, '0')}<span>↕</span></div>
       <div><span class="mini-type"><i data-lucide="${typeIcon(prompt.type)}"></i>${prompt.type}</span><h4>${escapeHTML(prompt.title)}</h4><p>${escapeHTML(prompt.tags.slice(0, 2).join(' · '))}</p></div>
       <button class="icon-button" data-action="remove-learning" data-id="${prompt.id}" aria-label="移除样本"><i data-lucide="x"></i></button>
     </article>`).join('');
 }
 
-function renderSampleCompare() {
+function compareSamples() {
   const samples = state.learningIds.map((id) => state.prompts.find((prompt) => prompt.id === id)).filter(Boolean);
+  const active = samples.find((prompt) => prompt.id === state.compareId);
+  return active ? [active] : samples;
+}
+
+function renderSampleCompare() {
+  const samples = compareSamples();
   if (!samples.length) {
-    return '<div class="analysis-placeholder"><i data-lucide="layers"></i><p>选择样本后，这里会并排展示它们的原始提示词，方便对照，或一键复制到你自己的 AI。</p></div>';
+    return '<div class="analysis-placeholder"><i data-lucide="layers"></i><p>选择样本后，这里会展示它的原始提示词，方便对照，或一键复制到你自己的 AI。</p></div>';
   }
+  const focused = !!state.compareId;
   return `
-    <div class="compare-actions"><button class="button secondary" data-action="copy-samples"><i data-lucide="copy"></i>复制全部样本</button><span>把样本和你的 Brief 一起发给你常用的 AI</span></div>
+    <div class="compare-actions"><button class="button secondary" data-action="copy-samples"><i data-lucide="copy"></i>${focused ? '复制这条样本' : '复制全部样本'}</button>${focused ? `<button class="button ghost" data-action="clear-compare"><i data-lucide="layers"></i>查看全部</button>` : '<span>点击左侧样本可单独对照</span>'}</div>
     <div class="analysis-groups">${samples.map((prompt) => `
       <article class="analysis-group expanded">
         <div class="analysis-head compare-head"><span>S/${prompt.number}</span><strong>${escapeHTML(prompt.title)}</strong><button class="icon-button" data-action="copy-text" data-id="${prompt.id}" aria-label="复制这条提示词"><i data-lucide="copy"></i></button></div>
@@ -298,6 +306,7 @@ function renderSampleCompare() {
 
 function renderWorkbench() {
   const sampleCount = state.learningIds.length;
+  const compareCount = compareSamples().length;
   const hasDraft = !!state.draft.trim();
   return `
     <div class="view workbench-view">
@@ -318,7 +327,7 @@ function renderWorkbench() {
           ${sampleCount ? '<p class="drag-hint"><i data-lucide="more-horizontal"></i>拖拽调整参考顺序，越靠前越优先对照</p>' : ''}
         </section>
         <section id="panel-analysis" class="bench-column analysis-column ${state.workbenchPanel === 'analysis' ? 'mobile-active' : ''}" role="tabpanel" aria-labelledby="tab-analysis">
-          <div class="column-heading"><div><span>02 / COMPARE</span><h2>样本对照</h2></div></div>
+          <div class="column-heading"><div><span>02 / COMPARE</span><h2>样本对照 <em>${compareCount}</em></h2></div></div>
           ${renderSampleCompare()}
         </section>
         <section id="panel-generator" class="bench-column generator-column ${state.workbenchPanel === 'generator' ? 'mobile-active' : ''}" role="tabpanel" aria-labelledby="tab-generator">
@@ -552,6 +561,7 @@ function deletePrompts(ids) {
   state.learningIds = state.learningIds.filter((item) => !idSet.has(item));
   idSet.forEach((id) => state.bulkSelected.delete(id));
   if (idSet.has(state.selectedPromptId)) state.selectedPromptId = state.prompts[0]?.id || null;
+  if (idSet.has(state.compareId)) state.compareId = '';
   persist();
 }
 
@@ -676,18 +686,26 @@ document.addEventListener('click', (event) => {
     case 'clear-bulk': state.bulkSelected.clear(); render(); break;
     case 'bulk-learning':
       state.learningIds = [...new Set([...state.learningIds, ...state.bulkSelected])];
-      state.bulkSelected.clear(); state.view = 'workbench'; persist(); render(); toast('学习集已建立，可查看提炼摘要'); break;
+      state.bulkSelected.clear(); state.view = 'workbench'; persist(); render(); toast('学习集已建立，可查看样本对照'); break;
     case 'add-learning':
       if (!state.learningIds.includes(id)) state.learningIds.push(id);
       state.view = 'workbench'; persist(); render(); toast('样本已加入学习集'); break;
-    case 'remove-learning': state.learningIds = state.learningIds.filter((item) => item !== id); persist(); render(); break;
+    case 'remove-learning':
+      state.learningIds = state.learningIds.filter((item) => item !== id);
+      if (state.compareId === id) state.compareId = '';
+      persist(); render(); break;
+    case 'select-compare':
+      state.compareId = state.compareId === id ? '' : id;
+      if (state.compareId && window.matchMedia('(max-width: 720px)').matches) { state.workbenchPanel = 'analysis'; window.scrollTo(0, 0); }
+      render(); break;
+    case 'clear-compare': state.compareId = ''; render(); break;
     case 'filter-type': state.typeFilter = type; state.mobileDetailOpen = false; render(); break;
     case 'filter-tag': state.tagFilter = tag; state.view = 'library'; state.mobileDetailOpen = false; render(); break;
     case 'toggle-sort': state.sortOpen = !state.sortOpen; render(); break;
     case 'set-sort': state.sort = button.dataset.sort; state.sortOpen = false; render(); break;
     case 'clear-filters': clearFilters(); break;
     case 'copy-samples': {
-      const samples = state.learningIds.map((item) => state.prompts.find((prompt) => prompt.id === item)).filter(Boolean);
+      const samples = compareSamples();
       if (!samples.length) { toast('学习集还是空的', 'info'); break; }
       copyText(samples.map((prompt) => `【样本 S/${prompt.number}】${prompt.title}\n${prompt.content}`).join('\n\n———\n\n'));
       break;
